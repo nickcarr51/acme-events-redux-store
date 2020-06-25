@@ -1,0 +1,211 @@
+<html>
+  <head>
+    <script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/redux/4.0.4/redux.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/react-router-dom/5.0.1/react-router-dom.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.js'></script>
+<style>
+body {
+  font-family: verdana;
+}
+nav {
+  display: flex;
+  justify-content: space-around;
+}
+a {
+  padding: 0.5rem;
+}
+.active {
+  background-color: tomato;
+  color: white;
+}
+</style>
+  </head>
+  <body>
+    <div id='root'></div>
+    <script type='text/babel'>
+    const { createStore, combineReducers } = Redux;
+    const { HashRouter, Link, Route, Redirect, Switch } = ReactRouterDOM;
+    const moment = moment;
+
+    const initialState = {
+        events:[]
+    }
+
+    const reducer = (state = initialState, action) => {
+        switch (action.type) {
+            case 'GOT_EVENTS': 
+                return {
+                    ...state,
+                    events: action.events
+                };
+            case 'SET_EVENT':
+                return {
+                    ...state,
+                    events: [...action.events, event]
+                }
+            case 'DELETE_EVENT': 
+            console.log(action);
+                return {
+                    ...state,
+                    events: action.events.filter(ev => ev.id !== event.id)
+                }
+            default: 
+                return state;
+
+        }
+    }
+
+    const store = createStore(reducer);
+    
+    const gotEvents = (events) => ({
+        type: 'GOT_EVENTS',
+        events,
+    })
+
+    const deleteEvent = () => ({
+        type: 'DELETE_EVENT',
+        events,
+    })
+
+    class Nav extends React.Component {
+        render() {
+            return (
+                <div>
+                    <Link to='/'>Home</Link>
+                    <Link to='/events'>Events</Link>
+                </div>
+            )
+        }
+    }
+
+    class Home extends React.Component {
+        state = { 
+            events: store.getState().events
+        }
+
+        componentDidMount() {
+            store.subscribe(() => {
+                const { events } = store.getState();
+
+                this.setState({
+                    events
+                })
+            })
+
+            this.getEvents();
+        }
+
+        getEvents = () => {
+            axios.get('/api/events')
+                .then((res) => {
+                    // console.log(res.data);
+                    store.dispatch(gotEvents(res.data))
+                })
+                .catch((e) => {
+                    console.log(e);
+                })
+        }
+
+        render() {
+            const { events } = this.state;
+            // console.log(this.state.events);
+            return <h1>You have { events.length } Events</h1>
+        }
+    }
+
+    class Events extends React.Component {
+        state = {
+            events: store.getState().events
+        }
+
+
+        componentDidMount() {
+            store.subscribe(() => {
+                const { events } = store.getState();
+
+                this.setState({
+                    events
+                })
+            })
+
+            this.getEvents();
+        }
+
+        getEvents = () => {
+            axios.get('/api/events')
+                .then((res) => {
+                    // console.log(res.data);
+                    store.dispatch(gotEvents(res.data))
+                })
+                .catch((e) => {
+                    console.log(e);
+                })
+        }
+
+        deleteEvent = (id) => {
+            axios.delete(`/api/events/${id}`)
+                .then((res) => {
+                    // console.log(res.data);
+                    store.dispatch(deleteEvent())
+                })
+                .catch((e) => {
+                    console.log(e);
+                })
+            this.getEvents();
+        }
+
+        render() {
+            // console.log(this.state.events);
+            const { events } = this.state;
+            return (
+                <div>
+                    <ul>
+                        {
+                            events.map(({ id, name, date }) => <li onClick={ () => this.deleteEvent(id) } key={ id }>{ name } { moment(date).format('L') }</li>)
+                        }
+                    </ul>
+                    <button>Add Random Event</button>
+                </div>
+            )
+        }
+    }
+
+    class App extends React.Component {
+        constructor() {
+            super()
+        }
+
+        componentWillUnmount() {
+
+        }
+
+        componentDidMount() {
+
+        }
+
+        render() {
+            return (
+                <HashRouter>
+                    <Nav />
+                    <Switch>
+                        <Route exact path='/' component={Home}  />
+                        <Route path='/events' component={Events} />
+                        <Redirect to='/' />
+                    </Switch>                        
+                </HashRouter>    
+            )
+        }
+    }
+
+
+
+      ReactDOM.render(<App />, document.querySelector('#root'));
+
+    </script>
+  </body>
+</html>
